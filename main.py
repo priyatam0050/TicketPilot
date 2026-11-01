@@ -1,5 +1,6 @@
 
 from models import TicketStore
+from importer import get_tickets_from_api
 store=TicketStore()
 flag=True
 
@@ -16,7 +17,13 @@ while(flag):
 
     print("4. Close")
 
-    print("5. Quit")
+    print("5. Import From API")
+
+    print("6. Report")
+
+    print("7. Search")
+
+    print("8. Quit")
     
     in1=input()
 
@@ -52,10 +59,36 @@ while(flag):
        print("Please Enter the Ticket Number you want to Close")
        ticket=input().strip().upper()
        store.close(ticket)
-
-    elif in1=="5":
-        flag=False
     
+    elif in1=="5":
+        ticket=get_tickets_from_api()
+        count=0
+        if len(ticket)>0:
+            for i in ticket:
+                title=i["title"]
+                priority=i["priority"]
+                try:
+                    number=store.create(title,priority)
+                    count+=1
+                except ValueError as e:
+                    print(f"Ticket Creation skipped Beacuse of {e}")
+            print(str(count)+" Ticket's created successfully")
+
+    elif in1=='6':
+        store.report()
+    
+    elif in1=='7':
+         print("Please enter keyword you want to search")
+         title=input().strip()
+         while title=='':
+            print("Please enter a valid keyword")
+            title=input().strip()
+         store.search(title)
+
+    elif in1=="8":
+        store.quit()
+        flag=False
+        
     else:
         print("Invalid Input Please choose only from Given Options")
 

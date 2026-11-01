@@ -1,5 +1,7 @@
 import csv
 from pathlib import Path
+import sqlite3
+
 class Ticket:
     Allowed_priority={"P1","P2","P3","P4"}
 
@@ -31,53 +33,72 @@ class Ticket:
     
 class TicketStore:
 
-    columns=["Number","Title","Priority","Status"]
-    file=Path(__file__).parent/"ticketdetails.csv"
     Inc_def="INC0000001"
 
     def __init__(self):
-        self.tickets=[]
-        if not self.file.exists() or self.file.stat().st_size==0:
-            with open(self.file,"w",newline="") as f:
-                writer=csv.DictWriter(f,fieldnames=self.columns)
-                writer.writeheader()
-        else:
-            with open(self.file,"r",newline="") as f:
-                reader=csv.DictReader(f)
-                for i in reader:
-                    self.tickets.append(Ticket(i["Number"],i["Title"],i["Priority"],i["Status"]))
+        connection=sqlite3.connect(Path(__file__).parent/"ticketpilot.db")
+        cursor=connection.cursor()
+        cursor.execute("""CREATE TABLE IF NOT EXISTS ticket(number TEXT PRIMARY KEY,title TEXT,priority TEXT,status TEXT)""")
+        connection.commit()
 
+        self.connection=connection
+         
     def showall(self):
-        if len(self.tickets)==0:
+        cursor=self.connection.cursor()
+        cursor.execute("SELECT * from ticket order by number")
+        ticket=cursor.fetchall()
+        if len(ticket)==0:
             print("No Tickets found")
             return
-        for i in self.tickets:
-            print(i)
+        for i in ticket:
+            ticket_instance=Ticket(i[0],i[1],i[2],i[3])
+            print(ticket_instance)
+
     def filter_by_priority(self,p):
-        Found=False
-        for i in self.tickets:
-            if i.priority.upper()==p.upper():
-                Found=True
-                print(i)
-        if Found==False:
+  
+        cursor=self.connection.cursor()
+        cursor.execute("select * from ticket where priority=? order by number",(p.upper(),))
+        tickets=cursor.fetchall()
+        if len(tickets)==0:
             print("No Tickets found for Priority "+p)
+            return 
+        for i in tickets:
+            ticket_instance=Ticket(i[0],i[1],i[2],i[3])
+            print(ticket_instance)
+
             
     def close(self,number):
-        found=False
-        for i in self.tickets:
-            if i.number==number:
-                found=True
-                i.close()
-                self.save()
-                break
-        if found==False:
+
+        cursor=self.connection.cursor()
+        ticket=cursor.execute("select status from ticket where number=?",(number,))
+        ticket=cursor.fetchall()
+        if len(ticket)==0:
             print(f"{number} NOT FOUND ")
+            return 
+        
+        ticket_status=ticket[0][0]
+        
+        if ticket_status=="Closed":
+            print(str(number)+" is already Closed")
+            return 
+        cursor.execute("UPDATE ticket SET status='Closed' where number=?",(number,))
+        self.connection.commit()
+        print(str(number) +" is Closed")
+
+       
     
     def getinc(self):
-        if(len(self.tickets)==0):
+        cursor=self.connection.cursor()
+        cursor.execute("select count(*) from ticket")
+        count=cursor.fetchall()[0][0]
+       
+        if count==0:
             return self.Inc_def
-
-        inc1=self.tickets[-1].number
+        cursor.execute("select max(number) from ticket")
+        ticket=cursor.fetchall()
+        
+        inc1=ticket[0][0]
+        
         inc1=int(inc1[3:])
         inc1+=1
         inc1=str(inc1)
@@ -85,21 +106,50 @@ class TicketStore:
         str1="INC"
         str1+=inc1
         return str1
+    def quit(self):
+        self.connection.close()
+        return
+        
     def create(self,title,priority):
         number=self.getinc()
         t=Ticket(number,title,priority)
-        self.tickets.append(t)
-        self.save()
+        cursor=self.connection.cursor()
+        cursor.execute("INSERT INTO ticket(number,title,priority,status) VALUES(?,?,?,?)",(t.number,t.title,t.priority,t.status))
+        self.connection.commit()
+
         return number
+    def report(self):
+        cursor=self.connection.cursor()
+        cursor.execute("select count(*) from ticket")
+       
+        count=cursor.fetchall()[0][0]
+        if count==0:
+            print("No Tickets to report")
+            return
 
+        cursor.execute("select priority,COUNT(*) from ticket GROUP BY priority ORDER BY priority")
+        print("--- Tickets by priority ---")
+        ticket=cursor.fetchall()
+        for i in ticket:
+            print(i[0]+" : "+str(i[1]))
 
+        
+        cursor.execute("select status,COUNT(*) from ticket GROUP BY status ORDER BY status")
+        print("--- Tickets by Status ---")
+        ticket=cursor.fetchall()
+        for i in ticket:
+            print(i[0]+" : "+str(i[1]))
+        print("Total Tickets : "+str(count))
 
-            
-               
-    def save(self):
-        with open(self.file,"w",newline="") as f:
-            writer=csv.DictWriter(f,fieldnames=self.columns)
-            writer.writeheader()
-            for i in self.tickets:
-                writer.writerow({"Number":i.number,"Title":i.title,"Priority":i.priority,"Status":i.status})
-    
+    def search(self,keyword):
+        cursor=self.connection.cursor()
+        keyword="%"+keyword+"%"
+        cursor.execute("select * from ticket where title LIKE ? order by number",(keyword,))
+        ticket=cursor.fetchall()
+        if len(ticket)==0:
+            print("No tickets Found with the given keyword")
+            return
+        for i in ticket:
+            ticket_instance=Ticket(i[0],i[1],i[2],i[3])
+            print(ticket_instance)
+      
