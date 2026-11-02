@@ -1,6 +1,10 @@
 import csv
 from pathlib import Path
 import sqlite3
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Ticket:
     Allowed_priority={"P1","P2","P3","P4"}
@@ -36,7 +40,7 @@ class TicketStore:
     Inc_def="INC0000001"
 
     def __init__(self):
-        connection=sqlite3.connect(Path(__file__).parent/"ticketpilot.db")
+        connection=sqlite3.connect(Path(__file__).parent/(os.getenv("DB_NAME")))
         cursor=connection.cursor()
         cursor.execute("""CREATE TABLE IF NOT EXISTS ticket(number TEXT PRIMARY KEY,title TEXT,priority TEXT,status TEXT)""")
         connection.commit()

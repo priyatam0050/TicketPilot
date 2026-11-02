@@ -1,7 +1,12 @@
 import requests
 from schema import TicketIn
 from pydantic import ValidationError
-API_URL="https://jsonplaceholder.typicode.com/posts"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_URL=os.getenv("API_URL")
 def fetch_posts():
     response=requests.get(API_URL)
     status_code=response.status_code
