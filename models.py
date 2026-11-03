@@ -1,4 +1,3 @@
-import csv
 from pathlib import Path
 import sqlite3
 import os
@@ -23,7 +22,7 @@ class Ticket:
     @priority.setter
     def priority(self,value):
         if value.upper() not in self.Allowed_priority:
-            raise ValueError(f"priorities must be in {self.Allowed_priority}")
+            raise ValueError(f"priorities must be in {self.Allowed_priority.sort()}")
         self._priority=value.upper()
         
     def close(self):
@@ -74,7 +73,7 @@ class TicketStore:
     def close(self,number):
 
         cursor=self.connection.cursor()
-        ticket=cursor.execute("select status from ticket where number=?",(number,))
+        cursor.execute("select status from ticket where number=?",(number,))
         ticket=cursor.fetchall()
         if len(ticket)==0:
             print(f"{number} NOT FOUND ")
