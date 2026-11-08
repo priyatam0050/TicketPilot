@@ -3,6 +3,7 @@ from models import TicketStore
 from importer import get_tickets_from_api
 store=TicketStore()
 flag=True
+from llm import classify_tickets
 
 pr=["P1","P2","P3","P4"]
 while(flag):
@@ -34,12 +35,28 @@ while(flag):
         while title=='':
             print("Please enter a valid Title")
             title=input().strip()
-                
-        print("Please enter Priority of the ticket")
+        print("ASKING AI ...")
+        result_ai=classify_tickets(title)
+        if result_ai is None:
+            print("AI unavailable, default priority P4")
+            ai_category="Unclassified"
+            ai_priority="P4"
+            ai_reason="AI Unavailable"
+        else:
+            ai_category=result_ai.category
+            ai_priority=result_ai.priority
+            ai_reason=result_ai.reason
+            print(f"AI Suggests Category = {result_ai.category}, Priority = {result_ai.priority} , Reason = {result_ai.reason}")
+        
+
         while True:
             try:
-                priority=(input()).upper()
-                number=store.create(title,priority)
+                print("Please enter to accept AI Priority or Type P1-P4 to Overide")
+                priority=(input()).upper().strip()
+                if priority=='':
+                    number=store.create(title,ai_priority,ai_category,ai_reason)
+                else:
+                     number=store.create(title,priority,ai_category,ai_reason)
                 print(number+" Created Succesfully")
                 break
             except ValueError:
@@ -67,8 +84,10 @@ while(flag):
             for i in ticket:
                 title=i["title"]
                 priority=i["priority"]
+                category=i["category"]
+                reason=i["reason"]
                 try:
-                    number=store.create(title,priority)
+                    number=store.create(title,priority,category,reason)
                     count+=1
                 except ValueError as e:
                     print(f"Ticket Creation skipped Beacuse of {e}")

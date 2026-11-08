@@ -6,14 +6,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Ticket:
-    Allowed_priority={"P1","P2","P3","P4"}
+    Allowed_priority=["P1","P2","P3","P4"]
 
-    def __init__(self,number,title,priority="P4",status="Open"):
+    def __init__(self,number,title,priority="P4",status="Open",category="",reason=""):
         self.number=number
         self.title=title
         self.priority=priority
         self.status=status
-
+        self.category=category
+        self.reason=reason
 
     @property
     def priority(self):
@@ -22,7 +23,7 @@ class Ticket:
     @priority.setter
     def priority(self,value):
         if value.upper() not in self.Allowed_priority:
-            raise ValueError(f"priorities must be in {self.Allowed_priority.sort()}")
+            raise ValueError(f"priorities must be in {",".join(self.Allowed_priority)}")
         self._priority=value.upper()
         
     def close(self):
@@ -32,16 +33,16 @@ class Ticket:
             self.status="Closed"
             print(self.number+" is closed")
     def __str__(self):
-        return (f"{self.number} | {self.title} | {self.priority} | {self.status}")
+        return (f"{self.number} | {self.title} | {self.priority} | {self.status} | {self.category}")
     
 class TicketStore:
 
     Inc_def="INC0000001"
 
     def __init__(self):
-        connection=sqlite3.connect(Path(__file__).parent/(os.getenv("DB_NAME")))
+        connection=sqlite3.connect(Path(__file__).parent/(os.getenv("DB_NAME","ticketpilot.db")))
         cursor=connection.cursor()
-        cursor.execute("""CREATE TABLE IF NOT EXISTS ticket(number TEXT PRIMARY KEY,title TEXT,priority TEXT,status TEXT)""")
+        cursor.execute("""CREATE TABLE IF NOT EXISTS ticket(number TEXT PRIMARY KEY,title TEXT,priority TEXT,status TEXT,category Text,reason Text)""")
         connection.commit()
 
         self.connection=connection
@@ -54,7 +55,8 @@ class TicketStore:
             print("No Tickets found")
             return
         for i in ticket:
-            ticket_instance=Ticket(i[0],i[1],i[2],i[3])
+            
+            ticket_instance=Ticket(i[0],i[1],i[2],i[3],i[4],i[5])
             print(ticket_instance)
 
     def filter_by_priority(self,p):
@@ -66,7 +68,7 @@ class TicketStore:
             print("No Tickets found for Priority "+p)
             return 
         for i in tickets:
-            ticket_instance=Ticket(i[0],i[1],i[2],i[3])
+            ticket_instance=Ticket(i[0],i[1],i[2],i[3],i[4],i[5])
             print(ticket_instance)
 
             
@@ -113,11 +115,11 @@ class TicketStore:
         self.connection.close()
         return
         
-    def create(self,title,priority):
+    def create(self,title,priority,category="",reason=""):
         number=self.getinc()
-        t=Ticket(number,title,priority)
+        t=Ticket(number,title,priority,category=category,reason=reason)
         cursor=self.connection.cursor()
-        cursor.execute("INSERT INTO ticket(number,title,priority,status) VALUES(?,?,?,?)",(t.number,t.title,t.priority,t.status))
+        cursor.execute("INSERT INTO ticket(number,title,priority,status,category,reason) VALUES(?,?,?,?,?,?)",(t.number,t.title,t.priority,t.status,t.category,t.reason))
         self.connection.commit()
 
         return number
@@ -134,14 +136,21 @@ class TicketStore:
         print("--- Tickets by priority ---")
         ticket=cursor.fetchall()
         for i in ticket:
-            print(i[0]+" : "+str(i[1]))
+            print(f"{i[0]} : {i[1]}")
 
         
         cursor.execute("select status,COUNT(*) from ticket GROUP BY status ORDER BY status")
         print("--- Tickets by Status ---")
         ticket=cursor.fetchall()
         for i in ticket:
-            print(i[0]+" : "+str(i[1]))
+            print(f"{i[0]} : {i[1]}")
+        
+
+        cursor.execute("select category,COUNT(*) from ticket GROUP BY category ORDER BY category")
+        print("--- Tickets by Category ---")
+        ticket=cursor.fetchall()
+        for i in ticket:
+            print(f"{i[0]} : {i[1]}")
         print("Total Tickets : "+str(count))
 
     def search(self,keyword):
@@ -153,6 +162,6 @@ class TicketStore:
             print("No tickets Found with the given keyword")
             return
         for i in ticket:
-            ticket_instance=Ticket(i[0],i[1],i[2],i[3])
+            ticket_instance=Ticket(i[0],i[1],i[2],i[3],i[4],i[5])
             print(ticket_instance)
       

@@ -1,5 +1,15 @@
 from pydantic import BaseModel,ValidationError,field_validator
+from typing import Literal
 ALLOWED_PRIORITIES=["P1","P2","P3","P4"]
+ALLOWED_CATEGORIES=["Network","Access","Hardware","Software","Email"]
+
+class TicketClassification(BaseModel):
+    category:Literal["Network","Access","Hardware","Software","Email"]
+    priority:Literal["P1","P2","P3","P4"]
+    reason:str
+    
+
+
 class TicketIn(BaseModel):
     title:str
     priority:str
@@ -20,10 +30,11 @@ class TicketIn(BaseModel):
         else:
             return value
 if __name__=="__main__":
-    try:
+    print(TicketClassification.model_json_schema())
+    """try:
         ticket=TicketIn(title="",priority="p2")
         print(ticket)
     except ValidationError as e:
-        print(e)
+        print(e)""" 
     
 
