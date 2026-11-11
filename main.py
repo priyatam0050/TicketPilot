@@ -1,9 +1,10 @@
 
 from models import TicketStore
 from importer import get_tickets_from_api
+
 store=TicketStore()
 flag=True
-from llm import classify_tickets
+from llm import classify_tickets_with_tools
 
 pr=["P1","P2","P3","P4"]
 while(flag):
@@ -36,7 +37,7 @@ while(flag):
             print("Please enter a valid Title")
             title=input().strip()
         print("ASKING AI ...")
-        result_ai=classify_tickets(title)
+        result_ai=classify_tickets_with_tools(title)
         if result_ai is None:
             print("AI unavailable, default priority P4")
             ai_category="Unclassified"

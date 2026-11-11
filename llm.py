@@ -4,9 +4,28 @@ from dotenv import load_dotenv
 from google import genai
 from schema import TicketClassification
 from pydantic import ValidationError
+from models import TicketStore
+import json
 load_dotenv()
 name=os.getenv("GEMINI_MODEL")
+ticket=TicketStore()
 client=genai.Client()
+SIMILAR_TOOL={
+
+     "type":"function",
+     "name":"similar_tickets",
+     "description":"find open tickets whose title contains only one keyword use it to spot dupicates or many users hit by the same issue and also Copy the word exactly as it is spelled in the ticket title, e.g. wifi, not Wi-Fi.",
+     "parameters":{
+         "type":"object",
+         "required":["keyword"],
+         "properties":{
+             "keyword":{
+                 "type":"string",
+                 "description": "one keyword from the ticket, e.g. VPN,outlook"
+             }
+         }
+     },
+}
 SYSTEM_INSTRUCTION = """
 You are an IT service desk analyst who classifies incident tickets.
 
@@ -30,6 +49,10 @@ PRIORITY:
 - P3: an issue with a workaround, or a request with a near deadline
 - P4: a request or minor issue, no business impact
 
+TOOLS:
+-Before classifying, call similar_tickets with one key word from the ticket.
+-If 3 or more open similar tickets exist, it’s likely an outage → P1.
+-If an almost identical ticket exists, mention it as a possible duplicate in the reason (with its number).
 
 EXAMPLES:
 Ticket: Outlook won't open, MFA prompt never arrives on phone
@@ -43,6 +66,8 @@ Answer: Category : Access,Priority: P3
 
 Ticket: Campaign email bounces back with error 552: quota exceeded
 Answer: Category : Email,Priority: P2
+
+
 """
 
 tickets = {
@@ -117,10 +142,53 @@ def classify_tickets(title):
             wait=wait*2
     print("AI Unavailable after 3 tries")
     return None
+def classify_tickets_with_tools(title):
+
+    wait=2
+    for i in range(3):
+        try:
+            flag_tool=False
+            #print("Classifying...")
+            interaction=client.interactions.create(model=name,system_instruction=SYSTEM_INSTRUCTION,input=title,tools=[SIMILAR_TOOL])
+            for i in interaction.steps:
+                if i.type=="function_call":
+                    if i.name=="similar_tickets":
+                        flag_tool=True
+                        sim_ticket=json.dumps(ticket.similar_tickets(i.arguments["keyword"]))
+                        tool_reply=[{
+                            "type": "function_result",
+                            "name": i.name,
+                            "call_id": i.id,
+                            "result":  [{"type": "text", "text": sim_ticket}]
+                        }]
+                        print(f"Checking similar tickets with the keyword : "+i.arguments["keyword"])
+                        final=client.interactions.create(model=name,system_instruction=SYSTEM_INSTRUCTION,previous_interaction_id=interaction.id,input=tool_reply,response_format={"type": "text", "mime_type": "application/json", "schema": TicketClassification.model_json_schema()})
+                        result=final.output_text
+                        ai_result=TicketClassification.model_validate_json(result)
+                        return ai_result
+            if flag_tool==False:
+                    interaction=client.interactions.create(model=name,system_instruction=SYSTEM_INSTRUCTION,input=title,response_format={"type": "text", "mime_type": "application/json", "schema": TicketClassification.model_json_schema()})
+                    result=interaction.output_text
+                    ai_result=TicketClassification.model_validate_json(result)
+                    return ai_result
+        except ValidationError:
+            return None
+        except Exception as e:
+            print(f"AI error .... Retrying in {wait}s...")
+            time.sleep(wait)
+            wait=wait*2
+    print("AI Unavailable after 3 tries")
+    return None
+
+                
+        
+
        
 
 if __name__=="__main__":
     count=0
+    print(classify_tickets_with_tools("wifi  issue"))
+    """
     for i in tickets:
         #sum_title=summarize_ticket(i)
         result=classify_tickets(i)
@@ -134,6 +202,6 @@ if __name__=="__main__":
             print(f"{i}\nExpected Result : {tickets[i][0]} | {tickets[i][1]}\nAI Result : {result.category}| {result.priority}\nReason:{result.reason}")  
         time.sleep(2) 
         
-    print(f"Accuracy : {count}/{len(tickets)}")
+    print(f"Accuracy : {count}/{len(tickets)}")"""
         
         

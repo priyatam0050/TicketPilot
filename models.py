@@ -164,4 +164,22 @@ class TicketStore:
         for i in ticket:
             ticket_instance=Ticket(i[0],i[1],i[2],i[3],i[4],i[5])
             print(ticket_instance)
-      
+    def similar_tickets(self,keyword):
+        cursor=self.connection.cursor()
+        keyword="%"+keyword+"%"
+        cursor.execute("SELECT * FROM TICKET WHERE TITLE LIKE ? AND STATUS = 'Open' ORDER BY NUMBER LIMIT 5",(keyword,))  
+        tickets=cursor.fetchall()
+        tic=[]
+        for i in tickets:
+            tic1={}
+            tic1["number"]=i[0]
+            tic1["title"]=i[1]
+            tic1["priority"]=i[2]
+            tic1["status"]=i[3]
+            tic1["category"]=i[4]
+            tic1["reason"]=i[5]
+            tic.append(tic1)
+        return tic
+if __name__=="__main__":
+    k= TicketStore()
+    print(k.similar_tickets("ZZZZZ"))
