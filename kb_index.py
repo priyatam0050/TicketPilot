@@ -55,13 +55,16 @@ def build_index():
 
     vectors=embed_text(texts,"RETRIEVAL_DOCUMENT")
 
-    ch=chromadb.PersistentClient(path=str(Path(__file__).parent/"chroma_db"))
-    collection=ch.get_or_create_collection(name="kb_chunks")
+    collection=get_Collection()
     collection.upsert(ids=ids,documents=texts,embeddings=vectors,metadatas=metadatas)
     print(collection.count())
 
 
-    
+def get_Collection():
+    ch=chromadb.PersistentClient(path=str(Path(__file__).parent/"chroma_db"))
+    collection=ch.get_or_create_collection(name="kb_chunks")
+    return collection
+
 if __name__=="__main__":
     build_index()
     
