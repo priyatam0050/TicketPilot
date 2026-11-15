@@ -15,12 +15,16 @@ Keep answers short. Use numbered steps where it helps."""
 
 def answer_question(question):
 
+    
+
     wait=2
 
     for k in range(3):
 
         try:
             chunks=search_kb(question)
+            if not chunks:
+                return {"answer":"KB index not built , Please come back after some time ","sources":[]}
             context=''
             sources=[]
             for i in chunks:
@@ -29,7 +33,14 @@ def answer_question(question):
                     sources.append(i["kb_id"])
             ai_input=context+" Question : "+question
             result=client.interactions.create(model=model,system_instruction=RAG_INSTRUCTION,input=ai_input)
-            return {"answer":result.output_text,"sources":(sources)}
+            answer=result.output_text
+            cited=[]
+            for i in sources:
+                if "[" + i + "]" in answer:
+                    cited.append(i)
+
+
+            return {"answer":result.output_text,"sources":(cited)}
         except Exception as e:
             print("AI Unavailable Retrying in "+str(wait)+" Seconds.....")
             time.sleep(wait)
@@ -42,6 +53,8 @@ def answer_question(question):
 def search_kb(question,n=5):
     query_embedding=embed_text([question],"RETRIEVAL_QUERY")
     collection=get_Collection()
+    if collection.count()==0:
+        return []
     result=collection.query(query_embedding,n_results=n)
     docs  = result["documents"][0]
     metas = result["metadatas"][0]

@@ -1,6 +1,7 @@
 
 from models import TicketStore
 from importer import get_tickets_from_api
+from rag import answer_question
 
 store=TicketStore()
 flag=True
@@ -11,7 +12,7 @@ while(flag):
    
     print("Choose any of the below Option")
 
-    print("1. Create")
+    print("1. Create")8
 
     print("2. view list")
 
@@ -25,7 +26,9 @@ while(flag):
 
     print("7. Search")
 
-    print("8. Quit")
+    print("8. ASK KB")
+
+    print("9. Quit")
     
     in1=input()
 
@@ -106,6 +109,19 @@ while(flag):
          store.search(title)
 
     elif in1=="8":
+         print("Please enter your Question")
+         question=input().strip()
+         while question=='':
+            print("Please enter a valid Question")
+            question=input().strip()
+         print("Searching KB\n")
+         result=answer_question(question)
+         print(result["answer"])
+         if result["sources"]:
+            print("Sources : "+",".join(result["sources"]))
+
+        
+    elif in1=="9":
         store.quit()
         flag=False
         

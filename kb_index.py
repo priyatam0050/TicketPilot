@@ -52,6 +52,7 @@ def build_index():
             "title":i["title"]
         }
         metadatas.append(meta_data)
+        
 
     vectors=embed_text(texts,"RETRIEVAL_DOCUMENT")
 
