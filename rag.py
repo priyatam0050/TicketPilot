@@ -36,7 +36,7 @@ def answer_question(question):
             answer=result.output_text
             cited=[]
             for i in sources:
-                if "[" + i + "]" in answer:
+                if i in answer:
                     cited.append(i)
 
 

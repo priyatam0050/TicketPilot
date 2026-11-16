@@ -12,7 +12,7 @@ while(flag):
    
     print("Choose any of the below Option")
 
-    print("1. Create")8
+    print("1. Create")
 
     print("2. view list")
 
