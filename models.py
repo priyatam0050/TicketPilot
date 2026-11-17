@@ -59,6 +59,26 @@ class TicketStore:
             ticket_instance=Ticket(i[0],i[1],i[2],i[3],i[4],i[5])
             print(ticket_instance)
 
+    def list_tickets(self):
+        cursor=self.connection.cursor()
+        cursor.execute("SELECT * from ticket order by number")
+        ticket=cursor.fetchall()
+        if len(ticket)==0:
+            return ("No Tickets found")
+        ticket_list=[]
+        for i in ticket:
+            tic={}
+            tic["number"]=i[0]
+            tic["Title"]=i[1]
+            tic["Priority"]=i[2]
+            tic["Status"]=i[3]
+            tic["Category"]=i[4]
+            tic["Reason"]=i[5]
+            ticket_list.append(tic)
+        return ticket_list
+
+        
+
     def filter_by_priority(self,p):
   
         cursor=self.connection.cursor()
